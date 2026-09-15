@@ -64,12 +64,11 @@ Render по умолчанию использует временную файл�
 
 ## GitHub
 
-Репозиторий инициализирован на ветке `main`. Удалённый репозиторий не создан и публикации нет. `.env`, база, сессии, логи, снимки проверок исключены из Git. Если первый коммит ещё не создан, задайте собственные `user.name` и `user.email`, затем:
+Репозиторий инициализирован на ветке `main`, первый коммит создан. Автор: AkhmetzyanovIldan. `origin` указывает на [AkhmetzyanovIldan/shawarma](https://github.com/AkhmetzyanovIldan/shawarma). `.env`, база, сессии, логи, снимки проверок исключены из Git. Для следующих изменений:
 
 ```sh
 git add .
-git commit -m "Build Kruti local Telegram Mini App"
-git remote add origin https://github.com/YOUR_ACCOUNT/YOUR_REPOSITORY.git
+git commit -m "Update Kruti Mini App"
 git push -u origin main
 ```
 
