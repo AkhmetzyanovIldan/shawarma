@@ -9,9 +9,11 @@
   "scripts": {
     "dev": "node --watch server/index.mjs",
     "start": "node server/index.mjs",
-    "build": "node --check server/index.mjs && node --check server/domain.mjs && node --check public/app.js",
+    "build": "node --check server/index.mjs && node --check server/domain.mjs && node --check server/platform.mjs && node --check server/payments.mjs && node --check server/operations.mjs && node --check public/app.js",
     "test": "node --test tests/*.test.mjs",
-    "test:browser": "node scripts/browser-check.cjs"
+    "test:browser": "node scripts/browser-check.cjs",
+    "backup": "node scripts/backup.mjs",
+    "restore": "node scripts/restore.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0"

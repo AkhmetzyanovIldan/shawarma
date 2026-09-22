@@ -16,15 +16,15 @@ export const extras = [
   {id:'jalapeno',name:'Халапеньо',price:30,icon:'🌶️'},
   {id:'sauce',name:'Больше соуса',price:25,icon:'🥣'}
 ];
-export function priceCart(items, unavailable = []) {
+export function priceCart(items, unavailable = [], menu = products, additions = extras) {
   if (!Array.isArray(items) || !items.length || items.length > 30) throw new Error('Добавьте блюда в корзину');
   return items.map(item => {
-    const p = products.find(p => p.id === item.id);
+    const p = menu.find(p => p.id === item.id);
     if (!p || unavailable.includes(p.id)) throw new Error('Блюдо сейчас недоступно');
     if (!Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 20) throw new Error('Недопустимое количество');
     const ids = item.extras ?? [];
-    if (!Array.isArray(ids) || ids.length > extras.length || new Set(ids).size !== ids.length) throw new Error('Проверьте добавки');
-    const selected = ids.map(id => { const e=extras.find(e=>e.id===id); if(!e) throw new Error('Неизвестная добавка'); return e; });
+    if (!Array.isArray(ids) || ids.length > additions.length || new Set(ids).size !== ids.length) throw new Error('Проверьте добавки');
+    const selected = ids.map(id => { const e=additions.find(e=>e.id===id); if(!e) throw new Error('Неизвестная добавка'); return e; });
     if (['sides','drinks'].includes(p.category) && ids.length) throw new Error('Добавки доступны только для шаурмы');
     const size = item.size ?? 'regular';
     if (!['regular','large'].includes(size) || (['sides','drinks'].includes(p.category) && size !== 'regular')) throw new Error('Недопустимый размер');

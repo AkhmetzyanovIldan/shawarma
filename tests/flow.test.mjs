@@ -4,6 +4,7 @@ import { spawn } from 'node:child_process';
 import { mkdtemp, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { request as httpRequest } from 'node:http';
 test('Customer/admin flow, auth boundaries, one-time pickup and persistent orders',async()=>{
   const dir=await mkdtemp(path.join(os.tmpdir(),'kruti-test-'));const port=31000+Math.floor(Math.random()*10000);const origin=`http://localhost:${port}`;let processRef;
   const start=async()=>{processRef=spawn(process.execPath,['server/index.mjs'],{env:{...process.env,PORT:String(port),APP_URL:origin,NODE_ENV:'development',PAYMENT_MODE:'demo',DATA_DIR:dir,ADMIN_PASSWORD:'test-admin-password'},stdio:['ignore','pipe','pipe']});await new Promise((resolve,reject)=>{processRef.stdout.on('data',chunk=>{if(String(chunk).includes('running at'))resolve();});processRef.once('error',reject);processRef.once('exit',code=>reject(new Error('Server exited '+code)));});};
@@ -25,13 +26,30 @@ test('Customer/admin flow, auth boundaries, one-time pickup and persistent order
     assert.equal((await request(`/api/admin/orders/${id}`,'POST',{action:'prepare'},adminCookie)).body.status,'preparing');
     assert.equal((await request(`/api/admin/orders/${id}`,'POST',{action:'ready'},adminCookie)).body.status,'ready');
     assert.equal((await request(`/api/admin/orders/${id}`,'POST',{action:'collect',code:'000000'},adminCookie)).status,400);
-    assert.equal((await request(`/api/admin/orders/${id}`,'POST',{action:'collect',code:paid.body.pickupCode},adminCookie)).body.status,'collected');
+    // Keep two request bodies open so both handlers overlap before mutation.
+    const pending=[];
+    const concurrent=[0,1].map(()=>new Promise((resolve,reject)=>{const req=httpRequest(origin+`/api/admin/orders/${id}`,{method:'POST',headers:{Origin:origin,'Content-Type':'application/json',Cookie:adminCookie}},res=>{res.resume();res.on('end',()=>resolve(res.statusCode));});req.on('error',reject);req.write('{"action":');pending.push(req);}));
+    await new Promise(resolve=>setTimeout(resolve,50));for(const req of pending)req.end(JSON.stringify('collect')+',"code":'+JSON.stringify(paid.body.pickupCode)+'}');
+    assert.deepEqual((await Promise.all(concurrent)).sort(),[200,409]);
     assert.equal((await request(`/api/admin/orders/${id}`,'POST',{action:'collect',code:paid.body.pickupCode},adminCookie)).status,409);
     assert.equal((await request(`/api/orders/${id}`,'GET',undefined,cookie)).body.pickupCode,undefined);
+    const employee=await request('/api/admin/staff','POST',{username:'cook',name:'Повар',password:'test-cook-password',permission:'kitchen'},adminCookie);assert.equal(employee.status,201);
+    const cook=(await request('/api/admin/login','POST',{username:'cook',password:'test-cook-password'})).cookie;
+    assert.equal((await request('/api/admin/settings','POST',{acceptingOrders:false},cook)).status,403);
+    assert.equal((await request('/api/admin/staff','GET',undefined,cook)).status,403);
+    assert.equal((await request(`/api/admin/orders/${id}`,'POST',{action:'refund',reason:'Ошибка заказа'},cook)).status,403);
+    await request('/api/admin/staff/'+employee.body.id,'POST',{active:false},adminCookie);
+    assert.equal((await request('/api/admin/orders','GET',undefined,cook)).status,401);
+    await request('/api/admin/settings','POST',{menu:{classic:{name:'Новое имя',price:400}}},adminCookie);
+    const nextOrder=await request('/api/orders','POST',{...orderInput,requestKey:'test-request-key-0000003'},cookie);assert.equal(nextOrder.body.total,1150);
+    assert.equal((await request(`/api/orders/${id}`,'GET',undefined,cookie)).body.total,930);
+    const refunded=await request(`/api/admin/orders/${id}`,'POST',{action:'refund',reason:'Демонстрация возврата'},adminCookie);assert.equal(refunded.body.status,'refunded');
+    assert.equal((await request(`/api/admin/orders/${id}`,'POST',{action:'refund',reason:'Повторная заявка'},adminCookie)).body.status,'refunded');
+    const audit=await request('/api/admin/audit','GET',undefined,adminCookie);assert.ok(audit.body.some(e=>e.action==='staff.updated'));
     await request('/api/admin/settings','POST',{acceptingOrders:false},adminCookie);
     assert.equal((await request('/api/orders','POST',{...orderInput,requestKey:'test-request-key-0000002'},cookie)).status,409);
     await stop();await start();
-    assert.equal((await request(`/api/orders/${id}`,'GET',undefined,cookie)).body.status,'collected');
+    assert.equal((await request(`/api/orders/${id}`,'GET',undefined,cookie)).body.status,'refunded');
     await request('/api/admin/logout','POST',{},adminCookie);assert.equal((await request('/api/admin/orders','GET',undefined,adminCookie)).status,401);
   }finally{if(processRef?.exitCode===null)await stop();await rm(dir,{recursive:true,force:true});}
 });
