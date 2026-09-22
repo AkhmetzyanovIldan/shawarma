@@ -59,7 +59,7 @@ function createSession(res,owner,role){const token=randomBytes(32).toString('hex
 function customer(req){const s=session(req);if(!s)fail(401,production?'Откройте приложение через Telegram':'Обновите страницу');return s.owner;}
 function admin(req,permissions=['owner','manager','kitchen']){const sessionData=session(req,'admin');const person=sessionData&&platform.staff(sessionData.owner);if(!person?.active)fail(401,'Войдите в админку');if(!permissions.includes(person.permission))fail(403,'Недостаточно прав');return person;}
 function ownOrder(req,id){const o=readOrder(id);if(!o||o.owner!==customer(req))fail(404,'Заказ не найден');return o;}
-function publicOrder(o,isAdmin=false){const {owner,requestKey,paymentId,paymentKey,refundKey,email,...rest}=o;return {...rest,pickupCode:isAdmin?undefined:(o.paid&&o.status!=='collected'?o.pickupCode:undefined)};}
+function publicOrder(o,isAdmin=false){const {owner,requestKey,paymentId,paymentKey,refundKey,email,...rest}=o;return {...rest,refundRequested:Boolean(refundKey),pickupCode:isAdmin?undefined:(o.paid&&o.status!=='collected'?o.pickupCode:undefined)};}
 const auth='Basic '+Buffer.from(`${process.env.YOOKASSA_SHOP_ID}:${process.env.YOOKASSA_SECRET_KEY}`).toString('base64');
 async function yoo(endpoint,options={}){const response=await fetch(`https://api.yookassa.ru/v3/${endpoint}`,{...options,headers:{Authorization:auth,'Content-Type':'application/json',...options.headers},signal:AbortSignal.timeout(15000)});if(!response.ok)fail(502,'ЮKassa временно недоступна. Попробуйте ещё раз.');return response.json();}
 const payments=createPayments({db,mode,yoo,readOrder,saveOrder,audit:platform.audit,canAccept:o=>accepting()&&!o.items.some(i=>unavailable().includes(i.id)||!menu().some(p=>p.id===i.id))});
