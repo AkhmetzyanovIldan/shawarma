@@ -3,7 +3,7 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const rub=n=>new Intl.NumberFormat('ru-RU').format(n)+' ₽';
 const icons={bag:'<path d="M6 7h12l2 14H4L6 7Z"/><path d="M9 8V5a3 3 0 0 1 6 0v3"/>',clock:'<circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 2"/>',flame:'<path d="M13 2c1 5-4 5-2 10 2-1 3-3 3-5 4 4 6 7 4 11-3 6-12 4-12-2 0-4 5-6 7-14Z"/>'};
 document.querySelectorAll('[data-icon]').forEach(el=>el.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[el.dataset.icon]}</svg>`);
-const tg=window.Telegram?.WebApp;tg?.ready();tg?.expand();try{tg?.setHeaderColor('#f6f3ea');tg?.setBackgroundColor('#f6f3ea');}catch{}
+const tg=window.Telegram?.WebApp;tg?.ready();tg?.expand();try{tg?.setHeaderColor('#111310');tg?.setBackgroundColor('#111310');}catch{}
 let catalog,cart=[],filter='all',sessionReady=false,activeOrder=null,orderTimer,toastTimer,adminTimer,adminTab='active',adminOrders=[],modalFocus;
 try{const saved=JSON.parse(localStorage.getItem('kruti-cart')||'[]');if(Array.isArray(saved))cart=saved;}catch{}
 const statuses={pending:'Ожидает оплаты',paid:'Заказ принят',preparing:'Готовим',ready:'Можно забирать',collected:'Выдан',canceled:'Оплата отменена'};
