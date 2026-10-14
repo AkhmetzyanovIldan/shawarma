@@ -1,4 +1,5 @@
 import { scryptSync, randomBytes, timingSafeEqual, randomUUID } from 'node:crypto';
+import initialStore from '../config/vkus-vostoka.demo.json' with { type: 'json' };
 
 export function passwordHash(password) {
   const salt=randomBytes(16).toString('hex');
@@ -7,7 +8,18 @@ export function passwordHash(password) {
 export function passwordMatches(password, stored) {
   try {const [salt,hash]=stored.split(':');return timingSafeEqual(scryptSync(password,salt,64),Buffer.from(hash,'hex'));}catch{return false;}
 }
-export const defaultStore={name:'КРУТИ',city:'Санкт-Петербург',address:'Демо-точка на Лиговском',phone:'',timezone:'Europe/Moscow',open:'00:00',close:'00:00',days:[0,1,2,3,4,5,6],leadMinutes:15,checkoutMinutes:15,capacity:30,legalName:'',inn:'',supportEmail:''};
+export const defaultStore=initialStore;
+export function initializeStore(db){
+  db.exec('CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY, value TEXT)');
+  const row=db.prepare("SELECT value FROM settings WHERE key='store'").get();
+  if(!row){db.prepare('INSERT INTO settings VALUES(?,?)').run('store',JSON.stringify(defaultStore));return;}
+  const saved=JSON.parse(row.value);
+  // Migrate only the exact old demo identity; retain hours, contacts and limits.
+  if(saved.name==='КРУТИ'&&saved.city==='Санкт-Петербург'&&saved.address==='Демо-точка на Лиговском'){
+    const {name,city,address}=defaultStore;
+    db.prepare("UPDATE settings SET value=? WHERE key='store'").run(JSON.stringify({...saved,name,city,address}));
+  }
+}
 export function validateStore(input) {
   const result={...defaultStore,...input};
   for(const [key,max] of Object.entries({name:60,city:80,address:200,phone:40,legalName:200,inn:12,supportEmail:254})){
@@ -46,6 +58,7 @@ export function validateCatalog(input){
   return {products:clean(input.products,true),extras:clean(input.extras,false)};
 }
 export function setupPlatform(db, adminPassword) {
+  initializeStore(db);
   db.exec(`PRAGMA busy_timeout=5000;
     CREATE INDEX IF NOT EXISTS orders_owner ON orders(owner);
     CREATE UNIQUE INDEX IF NOT EXISTS orders_payment ON orders(json_extract(body,'$.paymentId')) WHERE json_extract(body,'$.paymentId') IS NOT NULL;

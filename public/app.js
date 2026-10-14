@@ -91,6 +91,7 @@ function playAlert(){if(!soundEnabled||!soundContext)return;const osc=soundConte
 window.addEventListener('offline',()=>setConnection(false));
 function applyStore(){
   const s=catalog.store;if(!s)return;document.title=s.name+' — заказ с собой';
+  document.querySelector('meta[name="description"]')?.setAttribute('content',s.name+' · '+s.city+', '+s.address+'. Заказ с собой.');
   document.querySelectorAll('.logo').forEach(el=>{el.textContent=s.name;el.setAttribute('aria-label',s.name+' — главная');});
   const loc=$('.location>div');if(loc)loc.textContent=s.city;
   $('.hero .eyebrow').textContent='STREET FOOD / '+s.city.toUpperCase();

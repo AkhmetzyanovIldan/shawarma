@@ -193,6 +193,6 @@ async function handle(req,res){
   res.writeHead(200,{'Content-Type':types[ext],'Cache-Control':['.html','.js','.css'].includes(ext)?'no-cache':'public, max-age=3600'});res.end(req.method==='HEAD'?undefined:content);
 }
 export const server=http.createServer((req,res)=>{handle(req,res).catch(e=>{if(!res.headersSent)json(res,e.status||500,{error:e.status?e.message:'Не удалось выполнить действие. Попробуйте ещё раз.'});else res.end();if(!e.status)console.error(e.message);});});
-server.listen(port,production?'0.0.0.0':'127.0.0.1',()=>console.log(`КРУТИ running at ${origin} · ${mode}`));
+server.listen(port,production?'0.0.0.0':'127.0.0.1',()=>console.log(`${store().name} running at ${origin} · ${mode}`));
 function shutdown(){clearInterval(worker);clearInterval(backupTimer);server.close(()=>{db.close();releaseLock();process.exit(0);});setTimeout(()=>process.exit(1),20000).unref();}
 process.on('SIGTERM',shutdown);process.on('SIGINT',shutdown);

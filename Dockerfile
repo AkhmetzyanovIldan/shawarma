@@ -3,6 +3,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 COPY server ./server
+COPY config ./config
 COPY public ./public
 COPY scripts ./scripts
 RUN mkdir -p /app/data /var/data && chown node:node /app/data /var/data

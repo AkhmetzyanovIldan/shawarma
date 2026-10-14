@@ -12,6 +12,12 @@ const os=require('node:os');const path=require('node:path');const {spawn}=requir
   browser=await chromium.launch({headless:true,...(process.platform==='win32'?{channel:'msedge'}:{})});const page=await browser.newPage({viewport:{width:1440,height:1000},deviceScaleFactor:1});
   const errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('response',r=>{if(r.status()>=400)errors.push(r.status()+' '+r.url());});
   await page.goto(origin);await page.waitForSelector('.product');await page.evaluate(()=>document.fonts.ready);await page.screenshot({path:'test-results/desktop.png',fullPage:true});
+  const catalog=await page.request.get(origin+'/api/catalog').then(r=>r.json());
+  if(catalog.store.name!=='Вкус востока'||catalog.store.city!=='Москва')throw new Error('Fresh installation has incorrect store defaults');
+  const pageText=await page.locator('body').innerText();if(/Петербург|Лиговск|ПИТЕР/.test(pageText))throw new Error('Legacy city is visible');
+  const fallback=await browser.newPage({javaScriptEnabled:false});await fallback.goto(origin);
+  if(!(await fallback.locator('header .logo').textContent()).includes('Вкус востока')||!(await fallback.locator('#location p').textContent()).includes('Академика Волгина, 1'))throw new Error('Static page has incorrect branding');await fallback.close();
+  console.log('Fresh database and static HTML show Vkus Vostoka in Moscow');
   await page.getByRole('button',{name:'Выбрать Та самая классика',exact:true}).click();await page.getByRole('checkbox',{name:'Сыр чеддер, плюс 50 рублей'}).check();await page.getByRole('button',{name:'В корзину · 340 ₽',exact:true}).click();
   await page.locator('#cart-button').click();await page.locator('#checkout').click();await page.locator('#demo-pay').click();await page.waitForSelector('.pickup-code');
   const code=(await page.locator('.pickup-code').textContent()).replace(/\s/g,'');console.log('Customer flow passed, pickup code generated:',code.length===6);
