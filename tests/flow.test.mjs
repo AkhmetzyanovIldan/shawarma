@@ -14,8 +14,8 @@ test('Customer/admin flow, auth boundaries, one-time pickup and persistent order
     await start();
     assert.equal((await request('/api/admin/orders')).status,401);
     const a=await request('/api/session','POST',{}), b=await request('/api/session','POST',{});const cookie=a.cookie;
-    const orderInput={items:[{id:'classic',quantity:2,size:'large',extras:['cheddar','carrot'],price:1}],requestKey:'test-request-key-0000001',pickup:'asap'};
-    const created=await request('/api/orders','POST',orderInput,cookie);assert.equal(created.status,201);assert.equal(created.body.total,930);const id=created.body.id;
+    const orderInput={items:[{id:'classic',quantity:2,size:'regular',extras:['cheddar','jalapeno'],price:1}],requestKey:'test-request-key-0000001',pickup:'asap'};
+    const created=await request('/api/orders','POST',orderInput,cookie);assert.equal(created.status,201);assert.equal(created.body.total,660);const id=created.body.id;
     assert.equal((await request('/api/orders','POST',orderInput,cookie)).body.id,id);
     assert.equal((await request(`/api/orders/${id}`,'GET',undefined,b.cookie)).status,404);
     assert.equal((await request(`/api/orders/${id}/demo-pay`,'POST',{},cookie,'https://attacker.example')).status,403);
@@ -40,9 +40,10 @@ test('Customer/admin flow, auth boundaries, one-time pickup and persistent order
     assert.equal((await request(`/api/admin/orders/${id}`,'POST',{action:'refund',reason:'Ошибка заказа'},cook)).status,403);
     await request('/api/admin/staff/'+employee.body.id,'POST',{active:false},adminCookie);
     assert.equal((await request('/api/admin/orders','GET',undefined,cook)).status,401);
-    await request('/api/admin/settings','POST',{menu:{classic:{name:'Новое имя',price:400}}},adminCookie);
-    const nextOrder=await request('/api/orders','POST',{...orderInput,requestKey:'test-request-key-0000003'},cookie);assert.equal(nextOrder.body.total,1150);
-    assert.equal((await request(`/api/orders/${id}`,'GET',undefined,cookie)).body.total,930);
+    const catalog=(await request('/api/catalog')).body;
+    assert.equal((await request('/api/admin/settings','POST',{catalog:{products:catalog.products.map(p=>p.id==='classic'?{...p,name:'Новое имя',price:400}:p),extras:catalog.extras}},adminCookie)).status,200);
+    const nextOrder=await request('/api/orders','POST',{...orderInput,requestKey:'test-request-key-0000003'},cookie);assert.equal(nextOrder.body.total,920);
+    assert.equal((await request(`/api/orders/${id}`,'GET',undefined,cookie)).body.total,660);
     const refunded=await request(`/api/admin/orders/${id}`,'POST',{action:'refund',reason:'Демонстрация возврата'},adminCookie);assert.equal(refunded.body.status,'refunded');
     assert.equal((await request(`/api/admin/orders/${id}`,'POST',{action:'refund',reason:'Повторная заявка'},adminCookie)).body.status,'refunded');
     const audit=await request('/api/admin/audit','GET',undefined,adminCookie);assert.ok(audit.body.some(e=>e.action==='staff.updated'));

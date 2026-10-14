@@ -2,12 +2,15 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
 import { priceCart, validateTelegram, paymentMatches } from '../server/domain.mjs';
-test('Server prices extras and XL; ignores client-supplied prices',()=>{
-  const [i]=priceCart([{id:'classic',quantity:2,size:'large',extras:['cheddar','carrot'],unitPrice:1}]);
-  assert.equal(i.unitPrice,465);assert.equal(i.unitPrice*i.quantity,930);
+test('Server uses photographed menu prices and ignores client-supplied prices',()=>{
+  const [i]=priceCart([{id:'classic',quantity:2,size:'regular',extras:['cheddar','jalapeno'],unitPrice:1}]);
+  assert.equal(i.unitPrice,330);assert.equal(i.unitPrice*i.quantity,660);
+  assert.throws(()=>priceCart([{id:'classic',quantity:1,size:'large'}]),/размер/);
+  assert.throws(()=>priceCart([{id:'plov-set',quantity:1,extras:['cheddar']}]),/Добавки/);
+  assert.equal(priceCart([{id:'grill-half',quantity:1}])[0].unitPrice,325);
 });
 test('Rejects unknown products, duplicate extras, invalid quantities and unavailable dishes',()=>{
-  for(const item of [{id:'oops',quantity:1},{id:'classic',quantity:-1},{id:'classic',quantity:1.5},{id:'classic',quantity:1,extras:['cheddar','cheddar']},{id:'classic',quantity:1,extras:['free']},{id:'fries',quantity:1,size:'large'}])assert.throws(()=>priceCart([item]));
+  for(const item of [{id:'oops',quantity:1},{id:'classic',quantity:-1},{id:'classic',quantity:1.5},{id:'classic',quantity:1,extras:['cheddar','cheddar']},{id:'classic',quantity:1,extras:['free']},{id:'tea',quantity:1,size:'large'}])assert.throws(()=>priceCart([item]));
   assert.throws(()=>priceCart([{id:'classic',quantity:1}],['classic']));
 });
 function initData(token,date){const p=new URLSearchParams({auth_date:String(date),query_id:'test',user:JSON.stringify({id:12345,first_name:'Test'})});const check=[...p].sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>`${k}=${v}`).join('\n');const secret=createHmac('sha256','WebAppData').update(token).digest();p.set('hash',createHmac('sha256',secret).update(check).digest('hex'));return p.toString();}

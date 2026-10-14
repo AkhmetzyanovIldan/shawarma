@@ -59,7 +59,7 @@ test('Overnight schedule uses opening day; invalid store input is rejected',()=>
 });
 test('Custom menu has validated IDs and server-side pricing',()=>{
   const custom={...products[0],id:'custom',name:'Новое блюдо',price:499};const catalog=validateCatalog({products:[custom],extras});
-  assert.equal(priceCart([{id:'custom',quantity:1,size:'regular',extras:['cheddar']}],[],catalog.products,catalog.extras)[0].unitPrice,549);
+  assert.equal(priceCart([{id:'custom',quantity:1,size:'regular',extras:['cheddar']}],[],catalog.products,catalog.extras)[0].unitPrice,529);
   assert.throws(()=>validateCatalog({products:[custom,custom],extras}));assert.throws(()=>validateCatalog({products:[{...custom,image:'../../.env'}],extras}));
 });
 test('Staff passwords are salted hashes and backup restores data while revoking sessions',()=>{

@@ -1,5 +1,6 @@
 import { scryptSync, randomBytes, timingSafeEqual, randomUUID } from 'node:crypto';
 import initialStore from '../config/vkus-vostoka.demo.json' with { type: 'json' };
+import officialMenu from '../config/vkus-vostoka.menu.json' with { type: 'json' };
 
 export function passwordHash(password) {
   const salt=randomBytes(16).toString('hex');
@@ -9,6 +10,26 @@ export function passwordMatches(password, stored) {
   try {const [salt,hash]=stored.split(':');return timingSafeEqual(scryptSync(password,salt,64),Buffer.from(hash,'hex'));}catch{return false;}
 }
 export const defaultStore=initialStore;
+export function migratePhotoMenu(db){
+  const version='photo-menu-2026-10-14';
+  if(db.prepare('SELECT key FROM settings WHERE key=?').get(version))return;
+  const saved=JSON.parse(db.prepare("SELECT value FROM settings WHERE key='store'").get().value);
+  if(saved.name!=='Вкус востока'||saved.city!=='Москва')return;
+  const previous=JSON.parse(db.prepare("SELECT value FROM settings WHERE key='catalog'").get()?.value||'null');
+  const oldProducts=['classic','cheese','spicy','falafel','fries','lemonade'];
+  const oldExtras=['cheddar','chicken','carrot','fries','jalapeno','sauce'];
+  const products=[...officialMenu.products,...(previous?.products||[]).filter(p=>!oldProducts.includes(p.id)&&!officialMenu.products.some(n=>n.id===p.id))];
+  const extras=[...officialMenu.extras,...(previous?.extras||[]).filter(p=>!oldExtras.includes(p.id)&&!officialMenu.extras.some(n=>n.id===p.id))];
+  db.exec('BEGIN IMMEDIATE');
+  try{
+    const put=db.prepare('INSERT OR REPLACE INTO settings VALUES(?,?)');
+    put.run('catalog',JSON.stringify({products,extras}));
+    put.run('store',JSON.stringify({...saved,address:initialStore.address,open:'00:00',close:'00:00',days:[0,1,2,3,4,5,6],hoursConfirmed:true}));
+    const unavailable=JSON.parse(db.prepare("SELECT value FROM settings WHERE key='unavailable'").get()?.value||'[]');
+    put.run('unavailable',JSON.stringify(unavailable.filter(id=>products.some(p=>p.id===id))));
+    put.run(version,'true');db.exec('COMMIT');
+  }catch(e){db.exec('ROLLBACK');throw e;}
+}
 export function initializeStore(db){
   db.exec('CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY, value TEXT)');
   const row=db.prepare("SELECT value FROM settings WHERE key='store'").get();
@@ -50,15 +71,17 @@ export function validateCatalog(input){
       if(typeof item.name!=='string'||!item.name.trim()||item.name.length>80||!Number.isInteger(item.price)||item.price<1||item.price>10000)throw new Error('Проверьте название и цену');
       const result={id:item.id,name:item.name.trim(),price:item.price};
       if(!isProduct)return {...result,icon:'＋'};
-      if(!['shawarma','veggie','sides','drinks'].includes(item.category)||!Number.isInteger(item.weight)||item.weight<1||item.weight>5000||!['classic.webp','cheese.webp','spicy.webp','falafel.webp','fries.webp','lemonade.webp'].includes(item.image))throw new Error('Проверьте категорию, вес и фото');
+      if(!['shawarma','veggie','meals','grill','hotdogs','sides','drinks'].includes(item.category)||!Number.isInteger(item.weight)||item.weight<0||item.weight>5000||!['classic.webp','cheese.webp','spicy.webp','falafel.webp','fries.webp','lemonade.webp','east-plov.webp','east-manti.webp','east-chicken.webp','east-hotdog.webp','east-tea.webp','east-bread.webp','east-half-chicken.webp'].includes(item.image))throw new Error('Проверьте категорию, вес и фото');
+      if(item.portion!==undefined&&(typeof item.portion!=='string'||item.portion.length>80))throw new Error('Проверьте название порции');
       for(const key of ['description','ingredients','allergens','badge']){if(typeof item[key]!=='string'||item[key].length>(key==='badge'?30:500))throw new Error('Проверьте описание, состав и аллергены');result[key]=item[key];}
-      return {...result,weight:item.weight,category:item.category,image:item.image,color:'green'};
+      return {...result,weight:item.weight,portion:item.portion||'',allowLarge:item.allowLarge!==false,category:item.category,image:item.image,color:'green'};
     });
   };
   return {products:clean(input.products,true),extras:clean(input.extras,false)};
 }
 export function setupPlatform(db, adminPassword) {
   initializeStore(db);
+  migratePhotoMenu(db);
   db.exec(`PRAGMA busy_timeout=5000;
     CREATE INDEX IF NOT EXISTS orders_owner ON orders(owner);
     CREATE UNIQUE INDEX IF NOT EXISTS orders_payment ON orders(json_extract(body,'$.paymentId')) WHERE json_extract(body,'$.paymentId') IS NOT NULL;

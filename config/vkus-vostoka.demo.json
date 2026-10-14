@@ -5,12 +5,21 @@
   "timezone": "Europe/Moscow",
   "open": "00:00",
   "close": "00:00",
-  "days": [0, 1, 2, 3, 4, 5, 6],
+  "days": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+  ],
   "leadMinutes": 15,
   "checkoutMinutes": 15,
   "capacity": 30,
   "phone": "",
   "legalName": "",
   "inn": "",
-  "supportEmail": ""
+  "supportEmail": "",
+  "hoursConfirmed": true
 }
