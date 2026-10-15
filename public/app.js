@@ -3,7 +3,7 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const rub=n=>new Intl.NumberFormat('ru-RU').format(n)+' ₽';
 const icons={bag:'<path d="M6 7h12l2 14H4L6 7Z"/><path d="M9 8V5a3 3 0 0 1 6 0v3"/>',clock:'<circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 2"/>',menu:'<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>',pin:'<path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/>',copy:'<rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/>'};
 document.querySelectorAll('[data-icon]').forEach(el=>el.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[el.dataset.icon]}</svg>`);
-const tg=window.Telegram?.WebApp;tg?.ready();tg?.expand();try{tg?.setHeaderColor('#244c37');tg?.setBackgroundColor('#ffffff');}catch{}
+const tg=window.Telegram?.WebApp;tg?.ready();tg?.expand();try{tg?.setHeaderColor('#202521');tg?.setBackgroundColor('#202521');}catch{}
 let catalog,cart=[],filter='all',sessionReady=false,activeOrder=null,orderTimer,toastTimer,adminTimer,adminTab='active',adminOrders=[],modalFocus;
 let currentView='menu',trackedOrders=[],dockTimer,dockBusy=false,dockOffline=false;
 const cartDraft={pickup:'asap',note:'',email:''};
